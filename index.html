@@ -1,11 +1,361 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>你的名字 · 个人网站</title>
+  <meta name="description" content="个人主页 · 项目作品集 · 博客与联系信息" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="你的名字 · 个人网站" />
+  <meta property="og:description" content="个人主页 · 项目作品集 · 博客与联系信息" />
+  <meta property="og:image" content="https://avatars.githubusercontent.com/u/1?v=4" />
+  <meta property="og:url" content="https://你的用户名.github.io" />
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "你的名字",
+    "url": "https://你的用户名.github.io",
+    "sameAs": [
+      "https://github.com/你的用户名",
+      "https://www.linkedin.com/in/你的用户名"
+    ],
+    "jobTitle": "前端工程师",
+    "description": "热爱开源与高质量代码的开发者"
+  }
+  </script>
+  <style>
+    :root{
+      --bg: #0b1020;
+      --bg-elev: #0f162e;
+      --text: #e6e8ee;
+      --muted: #a9b0c0;
+      --brand: #0ea5e9; /* sky-500 */
+      --brand-2: #22d3ee; /* cyan-400 */
+      --card: #0e1326;
+      --ring: 0 0 0 3px rgba(14,165,233,.35);
+    }
+    :root.light{
+      --bg: #f8fafc;
+      --bg-elev: #ffffff;
+      --text: #0b1220;
+      --muted: #475569;
+      --brand: #0284c7;
+      --brand-2: #06b6d4;
+      --card: #ffffff;
+      --ring: 0 0 0 3px rgba(2,132,199,.25);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1100px;margin:0 auto;padding:0 20px}
+    header{position:sticky;top:0;backdrop-filter:saturate(180%) blur(12px);background:color-mix(in oklab, var(--bg) 75%, transparent);border-bottom:1px solid color-mix(in oklab, var(--text) 10%, transparent);z-index:50}
+    .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+    .brand{display:flex;gap:10px;align-items:center;font-weight:700}
+    .brand .logo{width:28px;height:28px;border-radius:9px;background:conic-gradient(from 210deg at 50% 50%,var(--brand),var(--brand-2),var(--brand));box-shadow:0 8px 30px rgba(34,211,238,.25)}
+    .nav a:hover{opacity:.9}
+    .nav-links{display:flex;gap:18px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid color-mix(in oklab, var(--text) 12%, transparent);border-radius:12px;background:linear-gradient(180deg,color-mix(in oklab,var(--bg-elev),transparent 20%),color-mix(in oklab,var(--bg),transparent 10%));cursor:pointer}
+    .btn:hover{box-shadow:var(--ring)}
+    .btn.primary{border:none;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#00131a}
+    .btn.ghost{background:transparent}
+
+    .hero{padding:80px 0;display:grid;grid-template-columns:1.2fr .8fr;gap:32px;align-items:center}
+    .hero h1{font-size:clamp(28px,3.2vw,44px);line-height:1.15;margin:0 0 14px}
+    .hero p{color:var(--muted);margin:0 0 24px}
+    .card{background:var(--card);border:1px solid color-mix(in oklab, var(--text) 12%, transparent);border-radius:20px;box-shadow:0 10px 40px rgba(2,6,23,.25)}
+    .card .inner{padding:22px}
+
+    .tags{display:flex;flex-wrap:wrap;gap:8px}
+    .tag{padding:6px 10px;border:1px solid color-mix(in oklab, var(--text) 15%, transparent);border-radius:999px;color:var(--muted)}
+
+    .grid{display:grid;gap:18px}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+
+    .section{padding:42px 0}
+    .section h2{font-size:22px;margin:0 0 16px}
+    .section p.lead{color:var(--muted);margin-top:-6px}
+
+    .project{position:relative;overflow:hidden}
+    .project .thumb{aspect-ratio:16/9;border-radius:14px;background:linear-gradient(120deg,color-mix(in oklab, var(--brand) 20%, transparent),color-mix(in oklab, var(--brand-2) 20%, transparent));display:flex;align-items:center;justify-content:center;font-weight:700}
+    .project h3{margin:12px 0 6px;font-size:18px}
+    .project .meta{color:var(--muted);font-size:14px}
+    .project a.stretch{position:absolute;inset:0}
+
+    .timeline{position:relative;margin-left:10px}
+    .timeline::before{content:"​";position:absolute;left:10px;top:0;bottom:0;width:2px;background:color-mix(in oklab, var(--text) 14%, transparent)}
+    .timeline-item{position:relative;padding-left:36px;margin:16px 0}
+    .timeline-item::before{content:"";position:absolute;left:2px;top:6px;width:18px;height:18px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 0 0 3px color-mix(in oklab, var(--text) 10%, transparent)}
+
+    footer{padding:30px 0;color:var(--muted);text-align:center;border-top:1px solid color-mix(in oklab, var(--text) 10%, transparent)}
+
+    .toolbar{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:10px;z-index:60}
+    .floating{border-radius:16px;padding:10px;border:1px solid color-mix(in oklab, var(--text) 12%, transparent);background:var(--bg-elev)}
+    .backtop{position:fixed;right:16px;bottom:16px}
+
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+
+    @media (max-width: 900px){
+      .hero{grid-template-columns:1fr}
+      .grid.cols-3{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width: 640px){
+      .nav-links{display:none}
+      .grid.cols-3, .grid.cols-2{grid-template-columns:1fr}
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello World!</h1>  
+  <header>
+    <div class="container nav">
+      <a class="brand" href="#top" aria-label="主页">
+        <span class="logo" aria-hidden="true"></span>
+        <span>你的名字</span>
+      </a>
+      <nav class="nav-links" aria-label="主导航">
+        <a href="#about">关于</a>
+        <a href="#projects">项目</a>
+        <a href="#experience">经历</a>
+        <a href="#contact">联系</a>
+        <a class="btn ghost" href="https://github.com/你的用户名" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <button id="themeToggle" class="btn" aria-pressed="false" aria-label="切换主题">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2m0 14v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span class="sr-only">切换主题</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="container hero">
+      <div class="card">
+        <div class="inner">
+          <p class="tag" style="display:inline-flex">👋 你好，我是</p>
+          <h1>你的名字（Your Name）</h1>
+          <p class="lead">一段 2~3 句的个人介绍。比如：前端 / 全栈开发者，专注性能优化与开发体验。热衷开源、数据可视化与设计系统。</p>
+          <div class="tags" style="margin:14px 0 20px">
+            <span class="tag">TypeScript</span>
+            <span class="tag">React</span>
+            <span class="tag">Node.js</span>
+            <span class="tag">Go</span>
+            <span class="tag">UI/UX</span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="btn primary" href="#projects">查看项目</a>
+            <a class="btn" href="resume.pdf" target="_blank" rel="noopener">下载简历</a>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="inner">
+          <img alt="头像" src="https://avatars.githubusercontent.com/u/1?v=4" style="width:100%;border-radius:14px;aspect-ratio:1/1;object-fit:cover" />
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="section container">
+      <h2>关于我</h2>
+      <p class="lead">用几段话介绍你的背景、擅长领域与职业目标。可附上你对工程质量、性能优化、产品思维或数据驱动的看法。</p>
+      <div class="grid cols-3">
+        <div class="card"><div class="inner"><h3>我擅长</h3><p>组件化 & 设计系统、可访问性（a11y）、复杂交互、SSR/SSG、图表可视化。</p></div></div>
+        <div class="card"><div class="inner"><h3>我在做</h3><p>构建高质量前端基础设施，推动工程规范与 DX（开发者体验）。</p></div></div>
+        <div class="card"><div class="inner"><h3>我在找</h3><p>远程/混合的前端或全栈机会，欢迎联系我交流合作。</p></div></div>
+      </div>
+    </section>
+
+    <section id="projects" class="section container">
+      <h2>代表项目</h2>
+      <p class="lead">精选 6 个项目。点击卡片可跳转到仓库或在线演示。</p>
+      <div id="projectGrid" class="grid cols-3"></div>
+    </section>
+
+    <section id="experience" class="section container">
+      <h2>经历</h2>
+      <div class="timeline" id="timeline">
+        <!-- JS 注入项 -->
+      </div>
+    </section>
+
+    <section id="contact" class="section container">
+      <h2>联系我</h2>
+      <p class="lead">欢迎通过以下方式沟通合作或交流想法：</p>
+      <div class="grid cols-2">
+        <div class="card"><div class="inner">
+          <h3>社交</h3>
+          <p><a href="mailto:you@example.com">you@example.com</a></p>
+          <p><a href="https://github.com/你的用户名" target="_blank" rel="noopener">GitHub</a> · <a href="https://www.linkedin.com/in/你的用户名" target="_blank" rel="noopener">LinkedIn</a> · <a href="https://twitter.com/你的用户名" target="_blank" rel="noopener">X/Twitter</a></p>
+        </div></div>
+        <form class="card" name="contact" method="POST" data-netlify="true">
+          <div class="inner">
+            <h3>留言（Netlify 表单示例）</h3>
+            <input type="hidden" name="form-name" value="contact" />
+            <label>你的称呼<input name="name" required style="width:100%" class="input"/></label>
+            <label>邮箱<input name="email" type="email" required style="width:100%" class="input"/></label>
+            <label>信息<textarea name="message" rows="4" required style="width:100%" class="input"></textarea></label>
+            <button class="btn primary" type="submit">发送</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">© <span id="year"></span> 你的名字 · 基于 GitHub Pages 部署</div>
+  </footer>
+
+  <!-- 返回顶部 & 快捷工具 -->
+  <div class="toolbar">
+    <a href="#top" class="btn floating" aria-label="返回顶部">↑</a>
+    <button class="btn floating" id="printBtn" aria-label="打印页面">🖨️</button>
+  </div>
+
+  <script>
+    // ====== 主题切换（持久化） ======
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('theme');
+    if(saved === 'light') root.classList.add('light');
+    toggle?.addEventListener('click', () => {
+      const nextIsLight = !root.classList.toggle('light');
+      toggle.setAttribute('aria-pressed', String(!nextIsLight));
+      localStorage.setItem('theme', root.classList.contains('light') ? 'light' : 'dark');
+    });
+
+    // ====== 年份 ======
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // ====== 打印 ======
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+    // ====== 数据（可直接改动） ======
+    const SITE = {
+      owner: {
+        name: '你的名字',
+        title: '前端 / 全栈开发者',
+        avatar: 'https://avatars.githubusercontent.com/u/1?v=4',
+        email: 'you@example.com',
+        github: '你的用户名', // 用于 API 拉取仓库（可选）
+      },
+      projects: [
+        {
+          name: 'Awesome Charts',
+          url: 'https://github.com/你的用户名/awesome-charts',
+          demo: 'https://你的用户名.github.io/awesome-charts',
+          description: '一个轻量级数据可视化库，支持可组合图表与动画。',
+          stack: ['TypeScript','Vite','Canvas']
+        },
+        {
+          name: 'Design System Kit',
+          url: 'https://github.com/你的用户名/design-system-kit',
+          demo: '',
+          description: '企业级组件库与主题系统，适配暗色模式与可访问性。',
+          stack: ['React','Storybook','CSS Variables']
+        },
+        {
+          name: 'Open API Starter',
+          url: 'https://github.com/你的用户名/open-api-starter',
+          demo: '',
+          description: '前后端协作脚手架，内置 Swagger 与 E2E 测试。',
+          stack: ['Node.js','Vitest','Playwright']
+        },
+        {
+          name: 'Image Tools',
+          url: 'https://github.com/你的用户名/image-tools',
+          demo: '',
+          description: '前端图像处理工具集，包含裁剪、滤镜与压缩。',
+          stack: ['Web Worker','WASM']
+        },
+        {
+          name: 'Blog Template',
+          url: 'https://github.com/你的用户名/blog-template',
+          demo: 'https://你的用户名.github.io/blog-template',
+          description: '支持 Markdown 的极简博客主题，SSG + 评论。',
+          stack: ['Eleventy','Alpine.js']
+        },
+        {
+          name: 'Realtime Board',
+          url: 'https://github.com/你的用户名/realtime-board',
+          demo: '',
+          description: '多人实时白板，端到端加密与 CRDT 同步。',
+          stack: ['WebRTC','CRDT']
+        }
+      ],
+      timeline: [
+        { time: '2024—至今', title: '某某科技 · 高级前端工程师', desc: '负责组件库与工程平台，推动可访问性与性能优化。' },
+        { time: '2022—2024', title: '开源维护者', desc: '维护数据可视化相关开源库，累计 Star 2k+。' },
+        { time: '2019—2022', title: '某某公司 · 前端工程师', desc: '参与大型 BFF 与前端监控系统建设。' }
+      ]
+    };
+
+    // ====== 渲染项目卡片 ======
+    const $grid = document.getElementById('projectGrid');
+    function h(tag, attrs = {}, ...children){
+      const el = document.createElement(tag);
+      Object.entries(attrs).forEach(([k,v]) => {
+        if(k === 'class') el.className = v; else if(k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v); else if(k === 'html') el.innerHTML = v; else el.setAttribute(k,v);
+      });
+      children.flat().forEach(c => el.append(c?.nodeType ? c : document.createTextNode(c ?? '')));
+      return el;
+    }
+    function renderProjects(list){
+      $grid.innerHTML = '';
+      list.forEach(p => {
+        const card = h('article', {class:'project card'} ,
+          h('a', {class:'stretch', href: p.demo || p.url, target:'_blank', rel:'noopener', 'aria-label': p.name}),
+          h('div', {class:'inner'},
+            h('div', {class:'thumb'}, p.name.charAt(0)),
+            h('h3', {}, p.name),
+            h('div', {class:'meta'}, p.description),
+            h('div', {class:'tags', style:'margin-top:8px'}, (p.stack||[]).map(s=>h('span',{class:'tag'},s)))
+          )
+        );
+        $grid.append(card);
+      });
+    }
+    renderProjects(SITE.projects);
+
+    // ====== 渲染时间线 ======
+    const $tl = document.getElementById('timeline');
+    SITE.timeline.forEach(item => {
+      $tl.append(h('div',{class:'timeline-item card'},
+        h('div',{class:'inner'},
+          h('div',{class:'meta'}, item.time),
+          h('h3',{}, item.title),
+          h('p',{}, item.desc)
+        )));
+    });
+
+    // ====== （可选）自动拉取 GitHub 热门仓库：将 owner.github 填成你的用户名即可 ======
+    async function fetchRepos(user){
+      try{
+        const res = await fetch(`https://api.github.com/users/${user}/repos?per_page=100&sort=updated`);
+        const repos = await res.json();
+        const top = repos
+          .filter(r => !r.fork)
+          .sort((a,b) => (b.stargazers_count||0) - (a.stargazers_count||0))
+          .slice(0,6)
+          .map(r => ({
+            name: r.name,
+            url: r.html_url,
+            demo: r.homepage || r.html_url,
+            description: r.description || '——',
+            stack: ['★ ' + r.stargazers_count, r.language || '']
+          }));
+        if(top.length){ renderProjects(top); }
+      }catch(err){ console.warn('GitHub API 受限或失败：', err); }
+    }
+    if(SITE.owner.github && SITE.owner.github !== '你的用户名'){
+      fetchRepos(SITE.owner.github);
+    }
+
+    // ====== 可访问性：按键焦点环 ======
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Tab'){ document.body.classList.add('kbd'); }});
+  </script>
 </body>
 </html>
