@@ -4,108 +4,108 @@ let allDishes = [];
 
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
-  // 检查用户是否已登录
-  const token = localStorage.getItem('token');
-  const userId = localStorage.getItem('userId');
-  
-  if (!token || !userId) {
-    window.location.href = 'auth.html';
-    return;
-  }
-  
-  // 加载菜品列表
-  loadDishes();
-  
-  // 事件监听
-  setupEventListeners();
+    // 检查用户是否已登录
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+
+    if (!token || !userId) {
+        window.location.href = 'auth.html';
+        return;
+    }
+
+    // 加载菜品列表
+    loadDishes();
+
+    // 事件监听
+    setupEventListeners();
 });
 
 function setupEventListeners() {
-  // 搜索功能
-  const searchInput = document.getElementById('searchInput');
-  if (searchInput) {
-    searchInput.addEventListener('input', debounce(() => {
-      const search = searchInput.value;
-      const category = document.getElementById('categoryFilter').value;
-      filterDishes(search, category);
-    }, 300));
-  }
-  
-  // 分类筛选
-  const categoryFilter = document.getElementById('categoryFilter');
-  if (categoryFilter) {
-    categoryFilter.addEventListener('change', () => {
-      const search = document.getElementById('searchInput').value;
-      const category = categoryFilter.value;
-      filterDishes(search, category);
+    // 搜索功能
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(() => {
+            const search = searchInput.value;
+            const category = document.getElementById('categoryFilter').value;
+            filterDishes(search, category);
+        }, 300));
+    }
+
+    // 分类筛选
+    const categoryFilter = document.getElementById('categoryFilter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            const search = document.getElementById('searchInput').value;
+            const category = categoryFilter.value;
+            filterDishes(search, category);
+        });
+    }
+
+    // 导航链接
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageName = link.getAttribute('href').slice(1);
+            navigateTo(pageName);
+            link.classList.add('active');
+        });
     });
-  }
-  
-  // 导航链接
-  document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const pageName = link.getAttribute('href').slice(1);
-      navigateTo(pageName);
-      link.classList.add('active');
-    });
-  });
 }
 
 function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
     };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
 }
 
 function loadDishes() {
-  api.getDishes({}).then(response => {
-    if (response.success) {
-      allDishes = response.data;
-      renderDishes(allDishes);
-    } else {
-      console.error('获取菜品列表失败', response.message);
-    }
-  }).catch(err => {
-    console.error('获取菜品列表失败', err);
-  });
+    api.getDishes({}).then(response => {
+        if (response.success) {
+            allDishes = response.data;
+            renderDishes(allDishes);
+        } else {
+            console.error('获取菜品列表失败', response.message);
+        }
+    }).catch(err => {
+        console.error('获取菜品列表失败', err);
+    });
 }
 
 function filterDishes(search, category) {
-  let filtered = allDishes;
-  
-  if (category) {
-    filtered = filtered.filter(dish => dish.category === category);
-  }
-  
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filtered = filtered.filter(dish => 
-      dish.name.toLowerCase().includes(searchLower) ||
-      dish.description.toLowerCase().includes(searchLower)
-    );
-  }
-  
-  renderDishes(filtered);
+    let filtered = allDishes;
+
+    if (category) {
+        filtered = filtered.filter(dish => dish.category === category);
+    }
+
+    if (search) {
+        const searchLower = search.toLowerCase();
+        filtered = filtered.filter(dish =>
+            dish.name.toLowerCase().includes(searchLower) ||
+            dish.description.toLowerCase().includes(searchLower)
+        );
+    }
+
+    renderDishes(filtered);
 }
 
 function renderDishes(dishes) {
-  const dishesGrid = document.getElementById('dishesGrid');
-  
-  if (dishes.length === 0) {
-    dishesGrid.innerHTML = '<p class="empty-message">未找到菜品</p>';
-    return;
-  }
-  
-  dishesGrid.innerHTML = dishes.map(dish => {
-    const emoji = getDishEmoji(dish.category);
-    return `
+    const dishesGrid = document.getElementById('dishesGrid');
+
+    if (dishes.length === 0) {
+        dishesGrid.innerHTML = '<p class="empty-message">未找到菜品</p>';
+        return;
+    }
+
+    dishesGrid.innerHTML = dishes.map(dish => {
+        const emoji = getDishEmoji(dish.category);
+        return `
       <div class="dish-card">
         <div class="dish-image">
           ${emoji}
@@ -126,21 +126,21 @@ function renderDishes(dishes) {
         </div>
       </div>
     `;
-  }).join('');
+    }).join('');
 }
 
 function quickAddToCart(dishId) {
-  const dish = allDishes.find(d => d._id === dishId);
-  if (dish) {
-    cart.add(dish, 1);
-    showNotification(`${dish.name} 已加入购物车！`);
-  }
+    const dish = allDishes.find(d => d._id === dishId);
+    if (dish) {
+        cart.add(dish, 1);
+        showNotification(`${dish.name} 已加入购物车！`);
+    }
 }
 
 function showNotification(message) {
-  // 创建临时通知
-  const notification = document.createElement('div');
-  notification.style.cssText = `
+    // 创建临时通知
+    const notification = document.createElement('div');
+    notification.style.cssText = `
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -152,13 +152,13 @@ function showNotification(message) {
     z-index: 2000;
     animation: slideIn 0.3s ease;
   `;
-  notification.textContent = message;
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => notification.remove(), 300);
-  }, 2000);
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 2000);
 }
 
 // 添加动画样式
