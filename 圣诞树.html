@@ -497,8 +497,31 @@
                 let avgDist = 0;
                 tips.forEach(t => avgDist += new THREE.Vector3(lm[t].x, lm[t].y, lm[t].z).distanceTo(wrist));
                 avgDist /= 4;
-                if (avgDist < 0.25) STATE.mode = MODES.TREE;
-                else if (avgDist > 0.4) STATE.mode = MODES.SCATTER;
+                // When fingers are close to wrist -> fist (TREE mode)
+                if (avgDist < 0.25) {
+                    if (STATE.mode !== MODES.TREE) {
+                        STATE.mode = MODES.TREE;
+                        // On small screens, show the focused photo as a centered overlay once
+                        try {
+                            if (window.innerWidth <= 768) this.showTreeOverlay();
+                        } catch (e) { }
+                    }
+                } else if (avgDist > 0.4) {
+                    STATE.mode = MODES.SCATTER;
+                }
+            }
+
+            showTreeOverlay() {
+                if (!window.showPhotoOverlayFromUrl) return;
+                if (!this.photos || this.photos.length === 0) return;
+                const p = this.photos[0];
+                let imgSrc = null;
+                try {
+                    const mats = p.mesh.material;
+                    const frontMat = Array.isArray(mats) ? mats[4] : mats;
+                    if (frontMat && frontMat.map && frontMat.map.image && frontMat.map.image.src) imgSrc = frontMat.map.image.src;
+                } catch (e) { }
+                if (imgSrc) window.showPhotoOverlayFromUrl(imgSrc);
             }
 
             animate() {
@@ -603,12 +626,156 @@
                 canvas.width = w; canvas.height = h;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, w, h);
-                canvas.style.display = 'block';
-                downloadLink.style.display = 'inline-block';
-                downloadLink.href = canvas.toDataURL('image/png');
-                downloadLink.download = 'photo.png';
-                downloadLink.textContent = '下载图片';
+
+                // Create overlay to show enlarged image centered
+                let overlay = document.getElementById('photoOverlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'photoOverlay';
+                    overlay.style.position = 'fixed';
+                    overlay.style.inset = '0';
+                    overlay.style.display = 'flex';
+                    overlay.style.alignItems = 'center';
+                    overlay.style.justifyContent = 'center';
+                    overlay.style.background = 'rgba(0,0,0,0.75)';
+                    overlay.style.zIndex = '3000';
+                    overlay.style.padding = '16px';
+                    overlay.style.boxSizing = 'border-box';
+                    overlay.style.backdropFilter = 'blur(4px)';
+                    // content container
+                    const box = document.createElement('div');
+                    box.style.position = 'relative';
+                    box.style.maxWidth = '92vw';
+                    box.style.maxHeight = '92vh';
+                    box.style.display = 'flex';
+                    box.style.flexDirection = 'column';
+                    box.style.alignItems = 'center';
+                    box.style.gap = '8px';
+                    // image element
+                    const img = document.createElement('img');
+                    img.id = 'photoOverlayImg';
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '100%';
+                    img.style.borderRadius = '8px';
+                    img.style.boxShadow = '0 8px 30px rgba(0,0,0,0.8)';
+                    img.style.transform = 'scale(1.05)';
+                    img.style.transition = 'transform 220ms ease';
+                    // close button
+                    const closeBtn = document.createElement('button');
+                    closeBtn.textContent = '关闭';
+                    closeBtn.style.position = 'absolute';
+                    closeBtn.style.top = '-10px';
+                    closeBtn.style.right = '-10px';
+                    closeBtn.style.padding = '6px 8px';
+                    closeBtn.style.borderRadius = '6px';
+                    closeBtn.style.border = 'none';
+                    closeBtn.style.background = 'rgba(0,0,0,0.6)';
+                    closeBtn.style.color = 'var(--c-gold)';
+                    closeBtn.style.cursor = 'pointer';
+                    closeBtn.addEventListener('click', () => { overlay.remove(); });
+
+                    // download link inside overlay
+                    const dl = document.createElement('a');
+                    dl.id = 'photoOverlayDownload';
+                    dl.style.color = 'var(--c-gold)';
+                    dl.style.textDecoration = 'underline';
+                    dl.style.padding = '6px 8px';
+                    dl.style.background = 'rgba(0,0,0,0.3)';
+                    dl.style.borderRadius = '6px';
+                    dl.textContent = '下载图片';
+
+                    box.appendChild(img);
+                    box.appendChild(dl);
+                    box.appendChild(closeBtn);
+                    overlay.appendChild(box);
+                    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+                    document.body.appendChild(overlay);
+                }
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const imgEl = document.getElementById('photoOverlayImg');
+                const dlEl = document.getElementById('photoOverlayDownload');
+                if (imgEl && dlEl) {
+                    imgEl.src = dataUrl;
+                    dlEl.href = dataUrl;
+                    dlEl.download = 'photo.png';
+                }
             }
+
+            // 全局方法：根据图片 URL 在页面中显示居中的图片覆盖层（可被外部调用）
+            window.showPhotoOverlayFromUrl = function (dataUrl) {
+                if (!dataUrl) return;
+                let overlay = document.getElementById('photoOverlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'photoOverlay';
+                    overlay.style.position = 'fixed';
+                    overlay.style.inset = '0';
+                    overlay.style.display = 'flex';
+                    overlay.style.alignItems = 'center';
+                    overlay.style.justifyContent = 'center';
+                    overlay.style.background = 'rgba(0,0,0,0.75)';
+                    overlay.style.zIndex = '3000';
+                    overlay.style.padding = '16px';
+                    overlay.style.boxSizing = 'border-box';
+                    overlay.style.backdropFilter = 'blur(4px)';
+
+                    const box = document.createElement('div');
+                    box.style.position = 'relative';
+                    box.style.maxWidth = '92vw';
+                    box.style.maxHeight = '92vh';
+                    box.style.display = 'flex';
+                    box.style.flexDirection = 'column';
+                    box.style.alignItems = 'center';
+                    box.style.gap = '8px';
+
+                    const img = document.createElement('img');
+                    img.id = 'photoOverlayImg';
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '100%';
+                    img.style.borderRadius = '8px';
+                    img.style.boxShadow = '0 8px 30px rgba(0,0,0,0.8)';
+                    img.style.transform = 'scale(1.05)';
+                    img.style.transition = 'transform 220ms ease';
+
+                    const closeBtn = document.createElement('button');
+                    closeBtn.textContent = '关闭';
+                    closeBtn.style.position = 'absolute';
+                    closeBtn.style.top = '-10px';
+                    closeBtn.style.right = '-10px';
+                    closeBtn.style.padding = '6px 8px';
+                    closeBtn.style.borderRadius = '6px';
+                    closeBtn.style.border = 'none';
+                    closeBtn.style.background = 'rgba(0,0,0,0.6)';
+                    closeBtn.style.color = 'var(--c-gold)';
+                    closeBtn.style.cursor = 'pointer';
+                    closeBtn.addEventListener('click', () => { overlay.remove(); });
+
+                    const dl = document.createElement('a');
+                    dl.id = 'photoOverlayDownload';
+                    dl.style.color = 'var(--c-gold)';
+                    dl.style.textDecoration = 'underline';
+                    dl.style.padding = '6px 8px';
+                    dl.style.background = 'rgba(0,0,0,0.3)';
+                    dl.style.borderRadius = '6px';
+                    dl.textContent = '下载图片';
+
+                    box.appendChild(img);
+                    box.appendChild(dl);
+                    box.appendChild(closeBtn);
+                    overlay.appendChild(box);
+                    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+                    document.body.appendChild(overlay);
+                }
+
+                const imgEl = document.getElementById('photoOverlayImg');
+                const dlEl = document.getElementById('photoOverlayDownload');
+                if (imgEl && dlEl) {
+                    imgEl.src = dataUrl;
+                    dlEl.href = dataUrl;
+                    dlEl.download = 'photo.png';
+                }
+            };
 
             fileInput.addEventListener('change', (ev) => {
                 const f = ev.target.files && ev.target.files[0];
