@@ -155,7 +155,8 @@
 
     <div id="webcam-container">
         <div id="cam-ui" style="display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:auto;padding:8px;background:rgba(0,0,0,0.25);border-radius:8px;">
-            <video id="webcam" style="width:160px;height:120px;border-radius:6px;background:#000;display:none;" autoplay playsinline muted></video>
+            <video id="webcam" style="width:160px;height:120px;border-radius:6px;background:#000;opacity:0;position:absolute;pointer-events:none;z-index:-1;" autoplay playsinline muted></video>
+            
             <canvas id="gestureCanvas" style="width:160px;height:120px;border-radius:6px;background:#000;border:1px solid rgba(212,175,55,0.3);"></canvas>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
                 <button id="btnOpenCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">打开摄像头</button>
@@ -622,9 +623,12 @@
                         const video = document.getElementById('webcam');
                         if (video.currentTime !== this.lastVideoTimeVal) {
                             this.lastVideoTimeVal = video.currentTime;
-                            const result = this.handLandmarker.detectForVideo(video, performance.now());
-                            this.detectGestures(result);
-                            this.drawHandGesture(result);
+                            // 检测前再次确认视频尺寸正常，防止报错
+                            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                                const result = this.handLandmarker.detectForVideo(video, performance.now());
+                                this.detectGestures(result);
+                                this.drawHandGesture(result);
+                            }
                             this.lastVisionTime = now;
                         }
                     }
@@ -687,6 +691,10 @@
                     const constraints = { video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false };
                     const s = await navigator.mediaDevices.getUserMedia(constraints);
                     video.srcObject = s;
+                    
+                    // --- 修复点2：显式调用播放，确保流在iOS等设备上真正开始 ---
+                    await video.play();
+                    
                     localStream = s;
                     showContainer();
                 } catch (e) {
