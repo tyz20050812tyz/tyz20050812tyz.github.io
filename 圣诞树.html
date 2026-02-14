@@ -155,7 +155,8 @@
 
     <div id="webcam-container">
         <div id="cam-ui" style="display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:auto;padding:8px;background:rgba(0,0,0,0.25);border-radius:8px;">
-            <video id="webcam" style="width:160px;height:120px;border-radius:6px;background:#000;" autoplay playsinline muted></video>
+            <video id="webcam" style="width:160px;height:120px;border-radius:6px;background:#000;display:none;" autoplay playsinline muted></video>
+            <canvas id="gestureCanvas" style="width:160px;height:120px;border-radius:6px;background:#000;border:1px solid rgba(212,175,55,0.3);"></canvas>
             <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
                 <button id="btnOpenCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">打开摄像头</button>
                 <button id="btnSwitchCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">切换前/后</button>
@@ -231,7 +232,7 @@
                 this.photos = [];
                 // Vision throttling variables
                 this.lastVisionTime = 0;
-                this.visionInterval = 100; // Run vision every 100ms (10 FPS)
+                this.visionInterval = 50; // Run vision every 50ms (20 FPS) for better precision
                 this.init();
             }
 
@@ -443,7 +444,11 @@
                 const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
                 this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
                     baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`, delegate: "GPU" },
-                    runningMode: "VIDEO", numHands: 1
+                    runningMode: "VIDEO",
+                    numHands: 1,
+                    minHandDetectionConfidence: 0.7,
+                    minHandPresenceConfidence: 0.7,
+                    minTrackingConfidence: 0.7
                 });
 
                 const video = document.getElementById('webcam');
@@ -478,36 +483,117 @@
                 if (!result.landmarks || result.landmarks.length === 0) return;
                 const lm = result.landmarks[0];
 
-                // Interaction
-                STATE.rotationOffset.x = THREE.MathUtils.lerp(STATE.rotationOffset.x, (lm[9].y - 0.5) * 1, 0.2);
-                STATE.rotationOffset.y = THREE.MathUtils.lerp(STATE.rotationOffset.y, (0.5 - lm[9].x) * 2, 0.2);
+                // Interaction - use middle finger as reference for better accuracy
+                STATE.rotationOffset.x = THREE.MathUtils.lerp(STATE.rotationOffset.x, (lm[12].y - 0.5) * 1, 0.2);
+                STATE.rotationOffset.y = THREE.MathUtils.lerp(STATE.rotationOffset.y, (0.5 - lm[12].x) * 2, 0.2);
                 this.mainGroup.rotation.y = STATE.rotationOffset.y;
                 this.mainGroup.rotation.x = STATE.rotationOffset.x;
 
-                // Gestures
+                // Gestures with improved precision
                 const thumb = new THREE.Vector3(lm[4].x, lm[4].y, lm[4].z);
                 const index = new THREE.Vector3(lm[8].x, lm[8].y, lm[8].z);
                 const wrist = new THREE.Vector3(lm[0].x, lm[0].y, lm[0].z);
+                const middle = new THREE.Vector3(lm[12].x, lm[12].y, lm[12].z);
 
-                if (thumb.distanceTo(index) < 0.05) {
-                    if (STATE.mode !== MODES.FOCUS) { STATE.mode = MODES.FOCUS; STATE.targetPhotoIndex = -1; }
+                // Calculate finger tip distances from wrist
+                const fingerTips = [8, 12, 16, 20];
+                let avgDist = 0;
+                fingerTips.forEach(t => avgDist += new THREE.Vector3(lm[t].x, lm[t].y, lm[t].z).distanceTo(wrist));
+                avgDist /= 4;
+
+                // Pinch gesture (thumb + index close together) - FOCUS mode
+                const thumbIndexDist = thumb.distanceTo(index);
+                if (thumbIndexDist < 0.06) {
+                    if (STATE.mode !== MODES.FOCUS) {
+                        STATE.mode = MODES.FOCUS;
+                        STATE.targetPhotoIndex = -1;
+                    }
                     return;
                 }
-                const tips = [8, 12, 16, 20];
-                let avgDist = 0;
-                tips.forEach(t => avgDist += new THREE.Vector3(lm[t].x, lm[t].y, lm[t].z).distanceTo(wrist));
-                avgDist /= 4;
-                // When fingers are close to wrist -> fist (TREE mode)
-                if (avgDist < 0.25) {
+
+                // Fist gesture (fingers close to wrist) - TREE mode
+                if (avgDist < 0.28) {
                     if (STATE.mode !== MODES.TREE) {
                         STATE.mode = MODES.TREE;
-                        // On small screens, show the focused photo as a centered overlay once
                         try {
                             if (window.innerWidth <= 768) this.showTreeOverlay();
                         } catch (e) { }
                     }
-                } else if (avgDist > 0.4) {
+                }
+                // Open hand gesture (fingers far from wrist) - SCATTER mode
+                else if (avgDist > 0.42) {
                     STATE.mode = MODES.SCATTER;
+                }
+            }
+
+            drawHandGesture(result) {
+                const canvas = document.getElementById('gestureCanvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const video = document.getElementById('webcam');
+
+                canvas.width = video.videoWidth || 320;
+                canvas.height = video.videoHeight || 240;
+
+                // Clear canvas with dark background
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if (!result.landmarks || result.landmarks.length === 0) {
+                    ctx.fillStyle = 'rgba(212,175,55,0.4)';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No hand detected', canvas.width / 2, canvas.height / 2);
+                    return;
+                }
+
+                const landmarks = result.landmarks[0];
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],  // Thumb
+                    [0, 5], [5, 6], [6, 7], [7, 8],  // Index
+                    [0, 9], [9, 10], [10, 11], [11, 12],  // Middle
+                    [0, 13], [13, 14], [14, 15], [15, 16],  // Ring
+                    [0, 17], [17, 18], [18, 19], [19, 20]  // Pinky
+                ];
+
+                // Draw connections (bones)
+                ctx.strokeStyle = 'rgba(212,175,55,0.7)';
+                ctx.lineWidth = 2.5;
+                connections.forEach(([start, end]) => {
+                    const p1 = landmarks[start];
+                    const p2 = landmarks[end];
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                    ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    ctx.stroke();
+                });
+
+                // Draw landmarks (joints) - color code by confidence
+                landmarks.forEach((landmark, i) => {
+                    const x = landmark.x * canvas.width;
+                    const y = landmark.y * canvas.height;
+
+                    // Larger circles for important joints (wrist and finger roots)
+                    const radius = [0, 5, 9, 13, 17].includes(i) ? 4 : 3;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'rgba(212,175,55,0.9)';
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#d4af37';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+
+                // Show hand info and confidence
+                if (result.handedness && result.handedness.length > 0) {
+                    const hand = result.handedness[0].displayName || 'Hand';
+                    const confidence = Math.round((result.handedness[0].score || 0) * 100);
+                    ctx.fillStyle = '#d4af37';
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`${hand} ${confidence}%`, 5, 15);
                 }
             }
 
@@ -536,7 +622,9 @@
                         const video = document.getElementById('webcam');
                         if (video.currentTime !== this.lastVideoTimeVal) {
                             this.lastVideoTimeVal = video.currentTime;
-                            this.detectGestures(this.handLandmarker.detectForVideo(video, performance.now()));
+                            const result = this.handLandmarker.detectForVideo(video, performance.now());
+                            this.detectGestures(result);
+                            this.drawHandGesture(result);
                             this.lastVisionTime = now;
                         }
                     }
