@@ -156,13 +156,20 @@
     <div id="webcam-container">
         <div id="cam-ui" style="display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:auto;padding:8px;background:rgba(0,0,0,0.25);border-radius:8px;">
             <video id="webcam" style="width:160px;height:120px;border-radius:6px;background:#000;" autoplay playsinline muted></video>
-            <div style="display:flex;gap:6px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
                 <button id="btnOpenCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">打开摄像头</button>
+                <button id="btnSwitchCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">切换前/后</button>
+                <button id="btnStartRec" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">开始录像</button>
+                <button id="btnStopRec" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">停止录像</button>
                 <button id="btnCapture" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">拍照</button>
                 <button id="btnStopCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">停止</button>
             </div>
             <canvas id="photoCanvas" width="320" height="240" style="display:none;border-radius:6px;border:1px solid rgba(212,175,55,0.1);"></canvas>
             <a id="downloadLink" style="display:none;color:var(--c-gold);text-decoration:underline;margin-top:4px;">下载图片</a>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:6px;">
+                <video id="recordingPlayback" controls style="display:none;width:160px;border-radius:6px;background:#000"></video>
+                <a id="downloadVideoLink" style="display:none;color:var(--c-gold);text-decoration:underline;">下载录像</a>
+            </div>
             <input id="fileInput" type="file" accept="image/*" capture="environment" style="display:none">
         </div>
     </div>
@@ -431,33 +438,39 @@
             }
 
             async initVision() {
+                // Initialize Mediapipe hand landmarker but do NOT auto-request camera.
+                // Mobile browsers often block getUserMedia unless triggered by a user gesture.
                 const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
                 this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
                     baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`, delegate: "GPU" },
                     runningMode: "VIDEO", numHands: 1
                 });
-                const video = document.getElementById('webcam');
-                const getUserMediaCompat = (constraints) => {
-                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        return navigator.mediaDevices.getUserMedia(constraints);
-                    }
-                    const nav = navigator;
-                    const legacy = nav.getUserMedia || nav.webkitGetUserMedia || nav.mozGetUserMedia || nav.msGetUserMedia;
-                    if (legacy) {
-                        return new Promise((resolve, reject) => legacy.call(nav, resolve, reject, constraints));
-                    }
-                    return Promise.reject(new Error('getUserMedia is not supported in this browser or context'));
-                };
 
-                try {
-                    const stream = await getUserMediaCompat({ video: { width: 320, height: 240, frameRate: { ideal: 30 } } });
-                    video.srcObject = stream;
-                    video.addEventListener('loadeddata', () => { this.videoReady = true; document.getElementById('webcam-container').style.opacity = '1'; });
-                } catch (err) {
-                    console.warn("Webcam error", err);
-                    const wc = document.getElementById('webcam-container');
+                const video = document.getElementById('webcam');
+                // Listen for the video to become ready — the user should open the camera via the UI button.
+                video.addEventListener('loadeddata', () => {
+                    this.videoReady = true;
+                    document.getElementById('webcam-container').style.opacity = '1';
+                });
+
+                // If camera not yet opened, show a small hint on mobile to tap the "打开摄像头" 按钮.
+                const wc = document.getElementById('webcam-container');
+                if (!video.srcObject) {
                     wc.style.opacity = '1';
-                    wc.innerHTML = '<div style="color:#fff;background:rgba(0,0,0,0.6);padding:10px;border-radius:6px;font-size:12px;max-width:260px;">摄像头不可用。请通过 HTTPS 或 localhost 打开页面，并允许摄像头访问。错误: ' + (err && err.message ? err.message : err) + '</div>';
+                    const hint = document.createElement('div');
+                    hint.style.color = '#fff';
+                    hint.style.background = 'rgba(0,0,0,0.5)';
+                    hint.style.padding = '8px';
+                    hint.style.borderRadius = '6px';
+                    hint.style.fontSize = '12px';
+                    hint.style.maxWidth = '260px';
+                    hint.style.textAlign = 'center';
+                    hint.textContent = '请点击“打开摄像头”以启用摄像头（移动浏览器需要用户手动触发）。';
+                    // Insert hint only if not already present
+                    if (!wc.querySelector('.camera-hint')) {
+                        hint.className = 'camera-hint';
+                        wc.appendChild(hint);
+                    }
                 }
             }
 
@@ -535,20 +548,31 @@
             const downloadLink = document.getElementById('downloadLink');
             const fileInput = document.getElementById('fileInput');
             const openBtn = document.getElementById('btnOpenCam');
+            const switchBtn = document.getElementById('btnSwitchCam');
+            const startRecBtn = document.getElementById('btnStartRec');
+            const stopRecBtn = document.getElementById('btnStopRec');
             const captureBtn = document.getElementById('btnCapture');
             const stopBtn = document.getElementById('btnStopCam');
+            const recordingPlayback = document.getElementById('recordingPlayback');
+            const downloadVideoLink = document.getElementById('downloadVideoLink');
             let localStream = null;
+            let currentFacing = 'user'; // default to front camera
+            let mediaRecorder = null;
+            let recordedChunks = [];
+            let recordingBlob = null;
 
             function showContainer() {
                 const wc = document.getElementById('webcam-container');
                 wc.style.opacity = '1';
             }
 
-            async function openCam() {
+            async function openCam(facing = currentFacing) {
                 try {
+                    currentFacing = facing;
                     if (video.srcObject) { localStream = video.srcObject; showContainer(); return; }
                     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('浏览器不支持 getUserMedia');
-                    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+                    const constraints = { video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false };
+                    const s = await navigator.mediaDevices.getUserMedia(constraints);
                     video.srcObject = s;
                     localStream = s;
                     showContainer();
@@ -602,7 +626,74 @@
                 reader.readAsDataURL(f);
             });
 
-            openBtn.addEventListener('click', openCam);
+            async function switchCamera() {
+                currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+                stopCam();
+                await openCam(currentFacing);
+            }
+
+            async function startRecording() {
+                if (!localStream) await openCam(currentFacing);
+                if (!localStream) return alert('无法访问摄像头');
+                // Try to add audio track if available (ask permission)
+                let combinedStream = localStream;
+                try {
+                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const tracks = [...localStream.getVideoTracks(), ...audioStream.getAudioTracks()];
+                    combinedStream = new MediaStream(tracks);
+                } catch (e) {
+                    // User denied microphone or not available — record without audio
+                    combinedStream = localStream;
+                }
+
+                recordedChunks = [];
+                const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? 'video/webm;codecs=vp8,opus' : 'video/webm');
+                try {
+                    mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mime });
+                } catch (e) {
+                    mediaRecorder = new MediaRecorder(combinedStream);
+                }
+                mediaRecorder.ondataavailable = (ev) => { if (ev.data && ev.data.size) recordedChunks.push(ev.data); };
+                mediaRecorder.onstop = () => {
+                    recordingBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                    if (window._lastRecordingUrl) URL.revokeObjectURL(window._lastRecordingUrl);
+                    const url = URL.createObjectURL(recordingBlob);
+                    window._lastRecordingUrl = url;
+                    recordingPlayback.src = url; recordingPlayback.style.display = 'block';
+                    downloadVideoLink.style.display = 'inline-block';
+                    downloadVideoLink.href = url; downloadVideoLink.download = 'recording.webm';
+                    downloadVideoLink.textContent = '下载录像';
+                };
+                mediaRecorder.start(1000);
+                startRecBtn.disabled = true; stopRecBtn.disabled = false;
+            }
+
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+                startRecBtn.disabled = false; stopRecBtn.disabled = true;
+            }
+
+            downloadVideoLink.addEventListener('click', async (e) => {
+                if (!recordingBlob) return;
+                // Prefer File System Access API when available for choosing folder
+                if (window.showSaveFilePicker) {
+                    e.preventDefault();
+                    try {
+                        const handle = await window.showSaveFilePicker({ suggestedName: 'recording.webm', types: [{ description: 'WebM Video', accept: { 'video/webm': ['.webm'] } }] });
+                        const writable = await handle.createWritable();
+                        await writable.write(recordingBlob);
+                        await writable.close();
+                        alert('已保存');
+                    } catch (err) {
+                        console.warn('保存被取消或失败', err);
+                    }
+                } // else the anchor will download normally
+            });
+
+            openBtn.addEventListener('click', () => openCam(currentFacing));
+            switchBtn.addEventListener('click', switchCamera);
+            startRecBtn.addEventListener('click', startRecording);
+            stopRecBtn.addEventListener('click', stopRecording);
             captureBtn.addEventListener('click', capture);
             stopBtn.addEventListener('click', stopCam);
 
