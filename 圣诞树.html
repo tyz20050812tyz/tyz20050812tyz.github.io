@@ -564,6 +564,8 @@
             function showContainer() {
                 const wc = document.getElementById('webcam-container');
                 wc.style.opacity = '1';
+                wc.style.pointerEvents = 'auto';
+                wc.style.zIndex = '1001';
             }
 
             async function openCam(facing = currentFacing) {
@@ -591,6 +593,8 @@
                 localStream = null;
                 const wc = document.getElementById('webcam-container');
                 wc.style.opacity = '0';
+                wc.style.pointerEvents = 'none';
+                wc.style.zIndex = '';
             }
 
             function capture() {
