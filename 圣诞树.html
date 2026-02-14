@@ -480,7 +480,7 @@
 
                 // Interaction
                 STATE.rotationOffset.x = THREE.MathUtils.lerp(STATE.rotationOffset.x, (lm[9].y - 0.5) * 1, 0.2);
-                STATE.rotationOffset.y = THREE.MathUtils.lerp(STATE.rotationOffset.y, (lm[9].x - 0.5) * 2, 0.2);
+                STATE.rotationOffset.y = THREE.MathUtils.lerp(STATE.rotationOffset.y, (0.5 - lm[9].x) * 2, 0.2);
                 this.mainGroup.rotation.y = STATE.rotationOffset.y;
                 this.mainGroup.rotation.x = STATE.rotationOffset.x;
 
