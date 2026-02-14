@@ -154,7 +154,17 @@
     </div>
 
     <div id="webcam-container">
-        <video id="webcam" style="width: 160px; height: 120px;" autoplay playsinline></video>
+        <div id="cam-ui" style="display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:auto;padding:8px;background:rgba(0,0,0,0.25);border-radius:8px;">
+            <video id="webcam" style="width:160px;height:120px;border-radius:6px;background:#000;" autoplay playsinline muted></video>
+            <div style="display:flex;gap:6px;">
+                <button id="btnOpenCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">打开摄像头</button>
+                <button id="btnCapture" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">拍照</button>
+                <button id="btnStopCam" style="padding:6px 8px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:transparent;color:var(--c-gold);">停止</button>
+            </div>
+            <canvas id="photoCanvas" width="320" height="240" style="display:none;border-radius:6px;border:1px solid rgba(212,175,55,0.1);"></canvas>
+            <a id="downloadLink" style="display:none;color:var(--c-gold);text-decoration:underline;margin-top:4px;">下载图片</a>
+            <input id="fileInput" type="file" accept="image/*" capture="environment" style="display:none">
+        </div>
     </div>
 
     <script type="module">
@@ -517,6 +527,90 @@
 
         new App();
     </script>
+
+    <script>
+        (function () {
+            const video = document.getElementById('webcam');
+            const canvas = document.getElementById('photoCanvas');
+            const downloadLink = document.getElementById('downloadLink');
+            const fileInput = document.getElementById('fileInput');
+            const openBtn = document.getElementById('btnOpenCam');
+            const captureBtn = document.getElementById('btnCapture');
+            const stopBtn = document.getElementById('btnStopCam');
+            let localStream = null;
+
+            function showContainer() {
+                const wc = document.getElementById('webcam-container');
+                wc.style.opacity = '1';
+            }
+
+            async function openCam() {
+                try {
+                    if (video.srcObject) { localStream = video.srcObject; showContainer(); return; }
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('浏览器不支持 getUserMedia');
+                    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+                    video.srcObject = s;
+                    localStream = s;
+                    showContainer();
+                } catch (e) {
+                    console.error('打开摄像头失败', e);
+                    alert('无法打开摄像头，请确保使用 HTTPS 并允许摄像头访问。\n' + (e && e.message ? e.message : e));
+                }
+            }
+
+            function stopCam() {
+                try {
+                    const s = video.srcObject || localStream;
+                    if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+                } catch (e) { console.warn(e); }
+                video.srcObject = null;
+                localStream = null;
+                const wc = document.getElementById('webcam-container');
+                wc.style.opacity = '0';
+            }
+
+            function capture() {
+                if (!video || (!video.srcObject && video.readyState === 0)) { fileInput.click(); return; }
+                const w = video.videoWidth || 320; const h = video.videoHeight || 240;
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, w, h);
+                canvas.style.display = 'block';
+                downloadLink.style.display = 'inline-block';
+                downloadLink.href = canvas.toDataURL('image/png');
+                downloadLink.download = 'photo.png';
+                downloadLink.textContent = '下载图片';
+            }
+
+            fileInput.addEventListener('change', (ev) => {
+                const f = ev.target.files && ev.target.files[0];
+                if (!f) return;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        canvas.width = img.width; canvas.height = img.height;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+                        canvas.style.display = 'block';
+                        downloadLink.style.display = 'inline-block';
+                        downloadLink.href = canvas.toDataURL('image/png');
+                        downloadLink.download = 'photo.png';
+                        downloadLink.textContent = '下载图片';
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(f);
+            });
+
+            openBtn.addEventListener('click', openCam);
+            captureBtn.addEventListener('click', capture);
+            stopBtn.addEventListener('click', stopCam);
+
+            // If page already started webcam via App.initVision, keep UI visible when ready
+            video.addEventListener('loadeddata', () => { document.getElementById('webcam-container').style.opacity = '1'; });
+        })();
+    </script>
+
 </body>
 
 </html>
